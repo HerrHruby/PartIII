@@ -20,6 +20,7 @@ import AO_model_MC
 import AO_learning_curves
 import AO_pair_ham
 
+
 model = 0 # = 0 for analytical AO, =1 for ML-2body
 
 def AO_3body_remainder(f, plot = 0):
@@ -28,6 +29,12 @@ def AO_3body_remainder(f, plot = 0):
     f_info = f + '_info'
     f_csv_3 = f + '_3.csv'
     f_info_3 = f + '_3_info'
+
+    with open(f_info, 'rb') as fp:
+        info_list = pickle.load(fp)
+
+    with open(f_info_3, 'rb') as fp:
+        info_list_3 = pickle.load(fp)
 
     # read in 3-body data
     df = pd.read_csv(f_csv_3)
@@ -40,11 +47,6 @@ def AO_3body_remainder(f, plot = 0):
     # return a GPR model for the two-body interaction
     gp_pair, X_test_pair, Y_test_pair, Y_pred_pair, std_pair, X_train_pair, Y_train_pair, MSE_pair, column_count_pair = AO_GP.AO_gauss_regressor(f)
 
-    with open(f_info, 'rb') as fp:
-        info_list = pickle.load(fp)
-
-    with open(f_info_3, 'rb') as fp:
-        info_list_3 = pickle.load(fp)
 
     pair_sum_list = [] # sum of pair potentials
     pair_indiv_list = [] # individual predictions
@@ -167,6 +169,12 @@ def plot_learning(f, learning = 0):
     f_csv_3 = f + '_3.csv'
     f_info_3 = f + '_3_info'
 
+    with open(f_info, 'rb') as fp:
+        info_list = pickle.load(fp)
+
+    with open(f_info_3, 'rb') as fp:
+        info_list_3 = pickle.load(fp)
+        
     gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred, Y_std = AO_3body_remainder(f, plot = 0)
 
     if learning == 1:
@@ -215,13 +223,21 @@ def plot_learning(f, learning = 0):
     print 'Coefficients: {}'.format(coefs)
     print 'Intercept: {}'.format(intercept)
 
+    fig, ax = plt.subplots()
+
     # plot of prediction value against test value
-    X_ = np.linspace(min(Y_test_n), max(Y_test_n), 100) 
-    plt.scatter(Y_test_n, Y_pred, s = 8, c = 'r')
+    X_ = np.linspace(min(Y_test_n), max(Y_test_n), 100)
+    textstr = 'R2 score: {}'.format(coefs[0])
+    ax.scatter(Y_test_n, Y_pred, s = 8, c = 'g', label = 'r = {}'.format(info_list_3[2]))
     # plt.errorbar(Y_test_n, Y_pred, yerr = Y_std, fmt = 'o', capsize = 2)
-    plt.plot(X_, X_*coefs[0] + intercept)
-    plt.xlabel('Test')
-    plt.ylabel('Prediction')
+    ax.plot(X_, X_*coefs[0] + intercept, c = 'r', label = 'Best fit line')
+    ax.plot(X_, X_, c = 'b', label = 'y = x')
+    ax.text(0.7, 0.1, textstr, transform=ax.transAxes, fontsize=8,
+        verticalalignment='top')
+    ax.legend()
+    ax.set_xlabel('Test')
+    ax.set_ylabel('Prediction')
+
     plt.show()
 
 

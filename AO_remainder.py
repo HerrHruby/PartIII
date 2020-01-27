@@ -19,11 +19,11 @@ import AO_GP
 import AO_model_MC
 import AO_learning_curves
 import AO_pair_ham
-
+import random
 
 model = 0 # = 0 for analytical AO, =1 for ML-2body
 
-def AO_3body_remainder(f, plot = 0):
+def AO_3body_remainder(f, plot = 0, shuffle = 0):
 
     f_csv = f + '.csv'
     f_info = f + '_info'
@@ -44,16 +44,21 @@ def AO_3body_remainder(f, plot = 0):
     dist_arr = np.array(dist_list)
     vol_arr = np.array(df.Vol)
 
-    # return a GPR model for the two-body interaction
-    gp_pair, X_test_pair, Y_test_pair, Y_pred_pair, std_pair, X_train_pair, Y_train_pair, MSE_pair, column_count_pair = AO_GP.AO_gauss_regressor(f)
+    if model == 1:
+        # return a GPR model for the two-body interaction
+        gp_pair, X_test_pair, Y_test_pair, Y_pred_pair, std_pair, X_train_pair, Y_train_pair, MSE_pair, column_count_pair = AO_GP.AO_gauss_regressor(f)
 
 
     pair_sum_list = [] # sum of pair potentials
     pair_indiv_list = [] # individual predictions
     indiv_dist_list = [] # individual pairwise distances
 
-    # for each config, loop through the distances and sum the predicted two-body interactions. Also return the individual distances and individual pair predictions (for checking)
+    # shuffles the distance list, removing sorting
+    if shuffle:
+        for i in dist_arr:
+            random.shuffle(i)
 
+    # for each config, loop through the distances and sum the predicted two-body interactions. Also return the individual distances and individual pair predictions (for checking)
     for i in dist_arr:
         pair_sum = 0
 
@@ -162,7 +167,7 @@ def AO_3body_remainder(f, plot = 0):
     return gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred, Y_std
 
 
-def plot_learning(f, learning = 0):
+def plot_learning(f, learning = 0, shuffle = 0):
 
     f_csv = f + '.csv'
     f_info = f + '_info'
@@ -175,7 +180,7 @@ def plot_learning(f, learning = 0):
     with open(f_info_3, 'rb') as fp:
         info_list_3 = pickle.load(fp)
         
-    gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred, Y_std = AO_3body_remainder(f, plot = 0)
+    gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred, Y_std = AO_3body_remainder(f, plot = 0, shuffle = shuffle)
 
     if learning == 1:
 
@@ -243,8 +248,7 @@ def plot_learning(f, learning = 0):
 
 if __name__ == '__main__':
     f = sys.argv[1]
-    plot_learning(f, learning = 0)
-
+    plot_learning(f, learning = 0, shuffle = 0)
 
 
 

@@ -24,9 +24,9 @@ AO_learning generates learning curves to validate GPR models
 
 AO_pairwise_ham contains the analytical AO pairwise solution
 
-AO_metropolis uses the metropolis algorithm to find equlibrium configurations in the canonical ensemble. Can employ the 2-body, 3-body or analytical model
+AO_metropolis - updated version - uses the metropolis algorithm to find equlibrium configurations in the canonical ensemble. Can employ the 2-body, 3-body or analytical model. Employs grid system and is optimised.
 
-AO_metropolis_grid is an improved version of AO_metropolis, and employs a grid system to drastically speed up calculations
+AO_metropolis_grid is an old version of AO_metropolis, and employs a grid system to drastically speed up calculations
 
 AO_rdf plots g(r) - the so-called "Radial Distribution Function" - for the output of AO_metropolis
 

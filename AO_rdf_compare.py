@@ -27,7 +27,7 @@ def get_all_distances(col_list_list):
     for col_list in col_list_list:
         for i in col_list:
             for j in col_list:
-                x, y, z = AO_model_MC.vec_difference(i, j, L)
+                x, y, z = AO_model_MC.cyclic_vec_difference(i, j, L)
                 dist = AO_model_MC.pythagoras(x, y, z)
 
                 if dist != 0.0:
@@ -46,7 +46,7 @@ def binner(num, col_list, col_list_len, col_list_list_len):
 
     print 'Colloid Count: {}'.format(col_list_len)
     print 'Colloid Configurations: {}'.format(col_list_list_len)
-    X = np.linspace(0, 0.3*L, num)
+    X = np.linspace(2, 0.3*L, num)
     X_len = len(X)
 
     if dim == 2:
@@ -74,7 +74,7 @@ def binner(num, col_list, col_list_len, col_list_list_len):
     return midpoint_list, bin_density_list
 
 
-def plotter(plotting_mode = 0):
+def plotter(num, plotting_mode = 0):
 
     col_dict = {}
 
@@ -83,7 +83,7 @@ def plotter(plotting_mode = 0):
         for index, i in enumerate(great_list):
             dict_list = []
             col_list, col_list_len, col_list_list_len = get_all_distances(i)
-            mid_list, bin_list = binner(50, col_list, col_list_len, col_list_list_len)  
+            mid_list, bin_list = binner(num, col_list, col_list_len, col_list_list_len)  
             dict_list.append(mid_list)
             dict_list.append(bin_list)
 
@@ -97,7 +97,7 @@ def plotter(plotting_mode = 0):
         for index, i in enumerate(great_list):
             X = np.linspace(0, L*0.3, 300)
             col_list, col_list_len, col_list_list_len = get_all_distances(i)
-            mid_list, bin_list = binner(80, col_list, col_list_len, col_list_list_len)          
+            mid_list, bin_list = binner(num, col_list, col_list_len, col_list_list_len)          
             X_train, X_test, Y_train, Y_test = train_test_split(np.array(mid_list), np.array(bin_list), test_size = 0.2)
 
             X_train = X_train.reshape(-1,1)
@@ -128,7 +128,7 @@ def plotter(plotting_mode = 0):
 
 
 if __name__ == "__main__":
-    plotter(plotting_mode = 0)
+    plotter(plotting_mode = 0, num = 50)
 
 
 

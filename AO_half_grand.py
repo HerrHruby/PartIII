@@ -15,9 +15,9 @@ r = 1
 n_c = 108
 n_p = 108
 dim = 2
-L = 41
+L = 34
 precision = 1000000000000
-amplitude = 0.5
+amplitude = 1
 
 if dim == 2:
     V = L**2
@@ -58,7 +58,7 @@ def canonical_move(col_list, pol_list):
 
     if switch:
         for i in update_col_list:
-            x, y, z = AO_model_MC.vec_difference(i, update_col_list[random_colloid], L)
+            x, y, z = AO_model_MC.cyclic_vec_difference(i, update_col_list[random_colloid], L)
             dist = AO_model_MC.pythagoras(x, y, z)
             if dist < 2*R and dist != 0.0:
                 print 'Move rejected: moved colloid overlaps with another colloid'
@@ -67,7 +67,7 @@ def canonical_move(col_list, pol_list):
 
     if switch:
         for i in pol_list:
-            x, y, z = AO_model_MC.vec_difference(i, update_col_list[random_colloid], L)
+            x, y, z = AO_model_MC.cyclic_vec_difference(i, update_col_list[random_colloid], L)
             dist = AO_model_MC.pythagoras(x, y, z)
             if dist < R + r:
                 print 'Move rejected: inserted colloid overlaps with a polymer'
@@ -116,7 +116,7 @@ def grand_move(col_list, pol_list, beta_mu):
                 switch = True
 
                 for i in col_list:
-                    x, y, z = AO_model_MC.vec_difference(i, random_coord, L)
+                    x, y, z = AO_model_MC.cyclic_vec_difference(i, random_coord, L)
                     dist = AO_model_MC.pythagoras(x, y, z)
                     if dist < R + r:
                         switch = False
@@ -160,7 +160,7 @@ def grand_move(col_list, pol_list, beta_mu):
 
 def simulation(cycles, beta_mu, test_plot = 0):
 
-    colloid_centres, init_dist_list = AO_model_MC.generate_system(L, R, n_c, r, precision, dim)
+    colloid_centres, init_dist_list = AO_model_MC.generate_system(L, R, n_c, r, precision)
     polymer_centres = AO_full_grand.generate_polymers(L, R, n_p, r, precision, colloid_centres)
 
     init_plt = AO_full_grand.system_plot(colloid_centres, polymer_centres, L)
@@ -174,8 +174,8 @@ def simulation(cycles, beta_mu, test_plot = 0):
     total_pols_list = []
     count_list = []
 
-    savepoint = 0.7*cycles
-    T = np.linspace(savepoint, cycles, 31)
+    savepoint = 0.5*cycles
+    T = np.linspace(savepoint, cycles, 41)
     saved_colloid_list = []
 
     start_time = time.time()
@@ -336,6 +336,6 @@ def run_ideal_simulation(cycles, trials, start, end, steps):
 if __name__ == '__main__':
     outfile = sys.argv[1]
     #run_ideal_simulation(40000, 10, 0, 1.2, 6)
-    simulation(4000000, -0.693) 
+    simulation(4000000, -1.9459101) 
 
 

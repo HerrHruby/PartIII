@@ -23,7 +23,13 @@ def AO_gauss_regressor(f):
 
     # read in data
     df = pd.read_csv(f_csv)
-    column_count = len(df.columns)-2
+
+    if len(df.columns) == 5:
+        column_count = len(df.columns) - 4
+
+    else:
+        column_count = len(df.columns) - 5
+
     cdf = df.iloc[:,:column_count:]
     dist_list = cdf.values.tolist()
     dist_arr = np.array(dist_list)

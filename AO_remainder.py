@@ -19,16 +19,17 @@ import AO_GP
 import AO_model_MC
 import AO_learning_curves
 import AO_pair_ham
+import AO_data_gen
 import random
 
 model = 0 # = 0 for analytical AO, =1 for ML-2body
 
 def AO_3body_remainder(f, plot = 0, shuffle = 0):
 
-    f_csv = f + '.csv'
-    f_info = f + '_info'
     f_csv_3 = f + '_3.csv'
     f_info_3 = f + '_3_info'
+    f_csv = f + '.csv'
+    f_info = f + '_info'
 
     with open(f_info, 'rb') as fp:
         info_list = pickle.load(fp)
@@ -38,7 +39,7 @@ def AO_3body_remainder(f, plot = 0, shuffle = 0):
 
     # read in 3-body data
     df = pd.read_csv(f_csv_3)
-    column_count = len(df.columns) -2
+    column_count = len(df.columns) -5
     cdf = df.iloc[:,:column_count:]
     dist_list = cdf.values.tolist()
     dist_arr = np.array(dist_list)
@@ -47,7 +48,6 @@ def AO_3body_remainder(f, plot = 0, shuffle = 0):
     if model == 1:
         # return a GPR model for the two-body interaction
         gp_pair, X_test_pair, Y_test_pair, Y_pred_pair, std_pair, X_train_pair, Y_train_pair, MSE_pair, column_count_pair = AO_GP.AO_gauss_regressor(f)
-
 
     pair_sum_list = [] # sum of pair potentials
     pair_indiv_list = [] # individual predictions
@@ -187,7 +187,7 @@ def plot_learning(f, learning = 0, shuffle = 0):
         # optional, to plot learning curves
         cv = ShuffleSplit(n_splits = 10, test_size = 0.2, random_state = 0)
 
-        AO_learning_curves.plot_learning_curve(gp_n_interact, dist_arr, n_body_list, cv = cv, n_jobs = 1)
+        AO_learning_curves.plot_learning_curve(gp_n_interact, dist_arr, n_body_list, cv = cv, n_jobs = 1, outfile = f)
         plt.show()
 
     else:
@@ -246,10 +246,34 @@ def plot_learning(f, learning = 0, shuffle = 0):
     plt.show()
 
 
+def specific_remainder(L, R, n, r, precision, N, lengths = [], input_coords = []):
+
+    if lengths and not input_coords:
+        vol, dist_list, MC_error = AO_data_gen.generate_specific_data(L, R, n, r, precision, N, lengths = lengths)
+
+    elif input_coords and not lengths: 
+        vol, dist_list, MC_error = AO_data_gen.generate_specific_data(L, R, n, r, precision, N, input_coords = input_coords)
+
+    else:
+        raise ValueError('Check inputs!')
+
+    pair_sum = 0
+    for i in dist_list:
+        pair_predict = AO_pair_ham.full_pair_ham(i, 2*r, 2*R)
+        pair_sum += pair_predict
+    
+    n_vol = -0.5*vol + 0.5*pair_sum
+
+    print 'n Overlap Volume: {}'.format(vol)
+    print 'Triple Overlap Volume: {}'.format(n_vol)
+    return n_vol
+
+
 if __name__ == '__main__':
     f = sys.argv[1]
     plot_learning(f, learning = 0, shuffle = 0)
 
+    #specific_remainder(L = 8, R = 1, n = 3, r = 1, precision = 100000000000, N = 5000000, lengths = [2.4219, 2.77838, 2.82852])
 
 
 

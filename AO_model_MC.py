@@ -16,6 +16,15 @@ from mpl_toolkits.mplot3d import Axes3D
 dim = 2
 
 def vec_difference(a, b, L):
+
+    x = abs(a[0] - b[0])
+    y = abs(a[1] - b[1])
+    z = abs(a[2] - b[2])
+
+    return x, y, z
+
+
+def cyclic_vec_difference(a, b, L):
     """A function to compute the difference between two shortest vectors in a periodic system"""
 
     x_d = abs(a[0] - b[0])
@@ -79,18 +88,18 @@ def generate_system(L, R, n, r, precision):
             if dim == 3:
                 for j in range(0, 3):
                     # generate random 3-D xyz coordinates for the colloid
-                    unscaled_coord = random.randint(0, precision*(L))
+                    unscaled_coord = random.randint(R + r, precision*(L-R-r))
                     coord = float(unscaled_coord)/precision
                     single_colloid.append(coord)
             
             else:
                 for j in range(0, 2):
-                    # generate random 2_D xyz coordinates for the colloid
-                    unscaled_coord = random.randint(0, precision*(L))
+                    # generate random 2_D xy coordinates for the colloid
+                    unscaled_coord = random.randint(R + r, precision*(L-R-r))
                     coord = float(unscaled_coord)/precision
-                    single_colloid.append(coord)
+                    single_colloid.append(coord) 
                 
-                single_colloid.append(0)    
+                single_colloid.append(0)    # z-coord is 0
 
             if colloid_centres:
                 indiv_dist = []
@@ -139,14 +148,14 @@ def constrained_generate_system(L, R, n, r, precision):
             if dim == 3:
                 for j in range(0, 3):
                     # generate random 3-D xyz coordinates for the colloid
-                    unscaled_coord = random.randint(0, precision*(L))
+                    unscaled_coord = random.randint(precision*(R + r), precision*(L-R-r))
                     coord = float(unscaled_coord)/precision
                     single_colloid.append(coord)
             
             else:
                 for j in range(0, 2):
                     # generate random 2_D xyz coordinates for the colloid
-                    unscaled_coord = random.randint(0, precision*(L))
+                    unscaled_coord = random.randint(precision*(R + r), precision*(L-R-r))
                     coord = float(unscaled_coord)/precision
                     single_colloid.append(coord)
                 
@@ -184,8 +193,27 @@ def constrained_generate_system(L, R, n, r, precision):
     return colloid_centres, dist_list
 
 
+def specific_generate_system(L, R, r, precision, lengths):
+    
+    l_1 = lengths[0]
+    l_2 = lengths[1]
+    l_3 = lengths[2]
 
-def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
+    colloid_centres = []
+    colloid_centres.append([0,0,0])
+    colloid_centres.append([0,l_1,0])
+
+    y_2 = (l_1**2 + l_2**2 - l_3**2)/(2*l_1)
+    x_2 = np.sqrt(l_2**2 - y_2**2)
+
+    colloid_centres.append([x_2, y_2, 0])
+
+    dist_list = [l_1, l_2, l_3]
+
+    return colloid_centres, dist_list
+
+
+def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0, lengths = [], input_coords = []):
     """Performs Monte Carlo to compute the volume fraction that is accessible to polymer"""
 
     if plotting:
@@ -197,12 +225,31 @@ def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
         pass
 
     # generate random system of colloids
-    if constrained:
-        colloid_centres, dist_list = constrained_generate_system(L, R, n, r, precision)
+    if lengths and not input_coords:
+        colloid_centres, dist_list = specific_generate_system(L, R, r, precision, lengths)
 
+    elif lengths and input_coords:
+        raise ValueError('Check inputs!')
     else:
-        colloid_centres, dist_list = generate_system(L, R, n, r, precision)
-    
+        if input_coords:
+            colloid_centres = input_coords
+            
+            init_dist_list = []
+            for i in colloid_centres:
+                for j in colloid_centres:
+                    x, y, z = vec_difference(i, j, L)
+                    init_dist_list.append(pythagoras(x, y, z))
+            
+            dist_set = list(set(init_dist_list))
+            dist_list = [i for i in dist_set if i != 0.0]
+
+        else:
+            if constrained:
+                colloid_centres, dist_list = constrained_generate_system(L, R, n, r, precision)
+
+            else:
+                colloid_centres, dist_list = generate_system(L, R, n, r, precision)
+        
     hit_count = 0
     
     # iterate through desired no. of steps
@@ -211,7 +258,7 @@ def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
         
         # generate coordinates for a random point in the box
         if dim == 3:
-            for j in range(0, 3):
+            for j in range(0,3):
                 unscaled_point = random.randint(0, precision*L)
                 point = float(unscaled_point)/precision
                 coords.append(point)
@@ -235,10 +282,9 @@ def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
         dist = min(indiv_dist)
 
         # if the point lies outside the exclusion zone, count as hit
-        if dist >=  R + r:
+        if dist <  R + r:
             hit_count += 1
             
-        else:
             if plotting:
                 x_coords.append(coords[0])
                 y_coords.append(coords[1])
@@ -248,7 +294,6 @@ def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
                 pass
 
     hit_rate = float(hit_count)/N
-    print hit_rate
     if dim == 3:
         tot_vol = L**3
 
@@ -260,11 +305,13 @@ def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
     MC_error = np.sqrt((hit_rate*(1-hit_rate))/N)
     MC_error = tot_vol*MC_error
 
+    print colloid_centres
+
     if plotting:
         if dim == 3:
             fig = plt.figure()
             ax = Axes3D(fig)
-
+            ax.set_aspect('equal')
             ax.scatter(x_coords, y_coords, z_coords, c = 'r')
 
             ax.set_xlim3d(0, L)
@@ -274,19 +321,22 @@ def monte_carlo(L, R, n, r, precision, N, plotting = None, constrained = 0):
             plt.show()
 
         else:
-            plt.scatter(x_coords, y_coords, c = 'r')
+            fig, ax = plt.subplots()
+            ax.set_aspect('equal')
+            ax.scatter(x_coords, y_coords, c = 'r')
 
             plt.show()
 
     else:
         pass
 
-    # returns the free volume, inter-colloid distances and MC error
-    return vol_frac, dist_list, MC_error
+    # returns the free volume, inter-colloid distances, MC error and colloid centres
+    return vol_frac, dist_list, MC_error, colloid_centres
 
 
 if __name__ == '__main__':
-    monte_carlo(L = 6, R = 1, n = 3, r = 1, precision = 10000000000000, N = 10000, plotting = 1, constrained = 1)
+    #monte_carlo(L = 8, R = 1, n = 3, r = 1, precision = 10000000000000, N = 10000, plotting = 1, input_coords = [[0.822216, 2.977126, 0],[0.665972, 0.15291024, 0],[0.9777810, 5.751146,0]])
+    monte_carlo(L = 10, R = 1, n = 3, r = 1, precision = 10000000000000, N = 10000, plotting = 1, constrained = 1)
 
 
 

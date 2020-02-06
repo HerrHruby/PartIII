@@ -26,7 +26,6 @@ dist_list = cdf.values.tolist()
 dist_arr = np.array(dist_list)
 vol_arr = np.array(df.Vol)
 
-"""
 gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred, Y_std = AO_remainder.AO_3body_remainder(f, plot = 0)
 
 
@@ -44,8 +43,6 @@ with open(f_Y, 'wb') as fp:
 
 with open(f_Xtrain, 'wb') as fp:
     pickle.dump(X_train_n, fp)
-"""
-
 
 with open(f_pred, 'rb') as fp:
     Y_pred = pickle.load(fp)
@@ -80,11 +77,16 @@ for i, j, k in zip(Y_pred, Y_test_n, X_test_n):
         susp_vol_test.append(j)
         susp_vol_pred.append(i)
 
+        print k
+        print j
+        print i
+
+
 x_coords = []
 y_coords = []
 z_coords = []
 
-for i in X_train_n:
+for i in X_test_n:
     x_coords.append(i[0])
     y_coords.append(i[1])
     z_coords.append(i[2])
@@ -102,9 +104,9 @@ ax.set_zlabel('long')
 
 plt.show()
 
-plt.scatter(x_coords, Y_train_n, alpha = 0.3, s = 8)
-plt.scatter(y_coords, Y_train_n, alpha = 0.3, s = 8)
-plt.scatter(z_coords, Y_train_n, alpha = 0.3, s = 8)
+plt.scatter(x_coords, Y_test_n, alpha = 0.3, s = 8)
+plt.scatter(y_coords, Y_test_n, alpha = 0.3, s = 8)
+plt.scatter(z_coords, Y_test_n, alpha = 0.3, s = 8)
 plt.scatter(susp_x, susp_vol_pred)
 plt.scatter(susp_y, susp_vol_pred)
 plt.scatter(susp_z, susp_vol_pred)

@@ -21,26 +21,16 @@ import random
 import copy
 import pickle
 import time
+import ujson
 
 
-# input file parser
-f = sys.argv[1]
-
-# input output file name
-outfile = sys.argv[2]
-
-n = 108  # number of colloids simulated
+n = 3 # number of colloids simulated
 L = 41  # length of sides of box
 R = 1  # colloid radius
 r = 1  # polymer radius
 dim = 2
 
-model = 2  # model = 0 for analytical AO, = 1 for 2-body ML, = 2 for 3-body ML
-
-gp, X_test, Y_test, Y_pred, std, X_train, Y_train, MSE, column_count = AO_GP.AO_gauss_regressor(f)
-
-gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred_n = AO_remainder.AO_3body_remainder(f) 
-
+model = 0  # model = 0 for analytical AO, = 1 for 2-body ML, = 2 for 3-body ML
 
 def generate_colloid_dict(colloid_centres):
     """A function that generates a dictionary from a list of colloids"""
@@ -64,7 +54,7 @@ def full_interaction(colloid_dict):
         for j in colloid_dict.itervalues():
 
             # compute vec difference between the vectors
-            x, y, z = AO_model_MC.vec_difference(i, j, L)
+            x, y, z = AO_model_MC.cyclic_vec_difference(i, j, L)
         
             # get distance and append
             init_dist_list.append(AO_model_MC.pythagoras(x, y, z))
@@ -103,9 +93,9 @@ def full_interaction(colloid_dict):
                         
                         init_dist_list = []
 
-                        x_1, y_1, z_1 = AO_model_MC.vec_difference(i, j, L)
-                        x_2, y_2, z_2 = AO_model_MC.vec_difference(i, k, L)
-                        x_3, y_3, z_3 = AO_model_MC.vec_difference(j, k, L)
+                        x_1, y_1, z_1 = AO_model_MC.cyclic_vec_difference(i, j, L)
+                        x_2, y_2, z_2 = AO_model_MC.cyclic_vec_difference(i, k, L)
+                        x_3, y_3, z_3 = AO_model_MC.cyclic_vec_difference(j, k, L)
                
                         init_dist_list.append(AO_model_MC.pythagoras(x_1, y_1, z_1)) 
                         init_dist_list.append(AO_model_MC.pythagoras(x_2, y_2, z_2))
@@ -252,7 +242,7 @@ def single_interaction(grid, book, colloid_dict, vol_dict, index):
 
     for i in flat_list:
         # compute vec difference between specified colloid and all colloids in adjacent and self cell
-        x, y, z = AO_model_MC.vec_difference(colloid_dict[i], colloid_dict[index], L)
+        x, y, z = AO_model_MC.cyclic_vec_difference(colloid_dict[i], colloid_dict[index], L)
         dist_list.append(AO_model_MC.pythagoras(x, y, z))
 
     dist_list = [w for w in dist_list if w != 0.0]
@@ -292,9 +282,9 @@ def single_interaction(grid, book, colloid_dict, vol_dict, index):
 
                 init_dist_list = []
 
-                x_1, y_1, z_1 = AO_model_MC.vec_difference(colloid_dict[index], colloid_dict[i], L)
-                x_2, y_2, z_2 = AO_model_MC.vec_difference(colloid_dict[i], colloid_dict[j], L)
-                x_3, y_3, z_3 = AO_model_MC.vec_difference(colloid_dict[index], colloid_dict[j], L)
+                x_1, y_1, z_1 = AO_model_MC.cyclic_vec_difference(colloid_dict[index], colloid_dict[i], L)
+                x_2, y_2, z_2 = AO_model_MC.cyclic_vec_difference(colloid_dict[i], colloid_dict[j], L)
+                x_3, y_3, z_3 = AO_model_MC.cyclic_vec_difference(colloid_dict[index], colloid_dict[j], L)
 
                 init_dist_list.append(AO_model_MC.pythagoras(x_3, y_3, z_3))
                 init_dist_list.append(AO_model_MC.pythagoras(x_1, y_1, z_1))
@@ -385,11 +375,15 @@ def system_plot(colloid_centres, L, form = 'l'):
 
     return plt
 
+def json_keys_to_int(x):
+    
+    return {int(k): v for k, v in x.items()}
+
 
 def metropolis(cycles, amplitude, temperature, dim, plotting = None, periodic_save = None):
     """Function to carry out the Metropolis algorithm"""
 
-    init_colloid_centres, init_dist_list = AO_model_MC.generate_system(L, R, n, r, 10000000000, dim)
+    init_colloid_centres, init_dist_list = AO_model_MC.generate_system(L, R, n, r, 10000000000)
     count = 0
     accept_count = 0
     # plot initial configuration, save as png
@@ -429,6 +423,9 @@ def metropolis(cycles, amplitude, temperature, dim, plotting = None, periodic_sa
 
             saved_colloid_list.append(saved_colloid)
 
+            print saved_colloid
+            print saved_colloid_list
+
         count += 1
         # only save vol data for every n steps
         if count % 1000 == 0:
@@ -465,12 +462,16 @@ def metropolis(cycles, amplitude, temperature, dim, plotting = None, periodic_sa
 
         print 'Move: {}'.format(move)
 
-        update_colloid_dict = copy.deepcopy(colloid_dict)
+        #update_colloid_dict = copy.deepcopy(colloid_dict)
+        update_colloid_dict = ujson.loads(ujson.dumps(colloid_dict))
+        update_colloid_dict = {int(k): v for k, v in update_colloid_dict.items()}
+        
         # find initial value to update
         update_value = update_colloid_dict[random_colloid][random_coordinate]
+        
         # generate updated value
         update_move = update_value + move
-
+        
         # ensure movement is also periodic
         if update_move >= L:
             update_move = update_move - L
@@ -484,16 +485,20 @@ def metropolis(cycles, amplitude, temperature, dim, plotting = None, periodic_sa
        
         print 'Perturbed Colloid Index: {}'.format(random_colloid)
         print 'Perturbed Coordinate: {}'.format(random_coordinate)
+        
+        #update_grid = copy.deepcopy(grid)
+        update_grid = ujson.loads(ujson.dumps(grid))
 
-        update_grid = copy.deepcopy(grid)
-        update_book = copy.deepcopy(book)
+        #update_book = copy.deepcopy(book)
+        update_book = ujson.loads(ujson.dumps(book))
+        update_book = {int(k): v for k, v in update_book.items()}
 
         # update grid and book with perturbation
         update_grid, update_book = refresh_grid(update_colloid_dict, update_grid, update_book, random_colloid) 
 
         # generate new vol_dict from new colloid_dict
         update_vol_dict, update_vol, min_dist = single_interaction(update_grid, update_book, update_colloid_dict, vol_dict, random_colloid)
-
+        
         print 'Update Volume: {}'.format(update_vol)
  
         # if total overlap volume is now higher, always accept move as long as move is legal
@@ -537,6 +542,8 @@ def metropolis(cycles, amplitude, temperature, dim, plotting = None, periodic_sa
     with open(outfile_col_info, 'wb') as fp:
         pickle.dump(saved_colloid_list, fp)
 
+    print len(saved_colloid_list)
+
     # save plot of total volume vs cycles as png
     plt.figure()
     plt.scatter(count_list, final_vol_list, s=8)
@@ -560,7 +567,17 @@ def metropolis(cycles, amplitude, temperature, dim, plotting = None, periodic_sa
     
 
 if __name__ == '__main__':
-    metropolis(cycles = 2000000, amplitude = 0.5, temperature = 2, plotting = 1, dim = 2)
+    # input file parser
+    f = sys.argv[1]
+
+    # input output file name
+    outfile = sys.argv[2]
+
+    gp, X_test, Y_test, Y_pred, std, X_train, Y_train, MSE, column_count = AO_GP.AO_gauss_regressor(f)
+
+    gp_n_interact, X_train_n, X_test_n, Y_train_n, Y_test_n, dist_arr, n_body_list, Y_pred_n, Y_std = AO_remainder.AO_3body_remainder(f) 
+
+    metropolis(cycles = 10000, amplitude = 0.5, temperature = 7, plotting = 1, dim = 2)
 
 
 
